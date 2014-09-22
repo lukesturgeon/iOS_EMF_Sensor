@@ -1,0 +1,13 @@
+#openFrameworks
+*.make
+Makefile
+Project.xcconfig
+openFrameworks-Info.plist
+bin/
+build/
+!data/
+ 
+#xcode5
+*.xcodeproj
+*.pch
+*.plist
