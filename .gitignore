@@ -4,7 +4,7 @@ Makefile
 Project.xcconfig
 openFrameworks-Info.plist
 build/
- 
+
 #xcode5
 *.xcodeproj
 *.pch
