@@ -7,14 +7,16 @@
 #include "ofxGui.h"
 #include "ofxXmlSettings.h"
 
+#define EASING 0.5 //[0.001, 0.999]
 #define NUM_GRADIENTS 4
 #define XML_SETTINGS_FILE "mySettings.xml"
 
-// statemachine
-static int STATE_DEBUG_SENSOR = 0;
-static int STATE_DEBUG_DRAWING = 1;
-static int STATE_DEBUG_COLOUR = 2;
-static int STATE_BUBBLE = 3;
+#define DRAWING_MODE_A 1
+#define DRAWING_MODE_B 2
+#define DRAWING_MODE_C 3
+
+#define CONTROL_TAB_DRAWING 1
+#define CONTROL_TAB_SENSOR 2
 
 class SimpleButton : public ofRectangle {
 	public :
@@ -61,29 +63,27 @@ public:
 	void gotMemoryWarning();
 	void deviceOrientationChanged(int newOrientation);
 	
-	// custom methods
-	void drawShape();
-	void drawDebugData();
-	void drawColourPicker();
-	void resetSensorButtonPressed();
-	void updateSensorButtonPressed();
-	void colourPickerButtonPressed();
+private:
 	
-	// statemachine
-	int displayMode = STATE_DEBUG_SENSOR;
-	
-	// access the device magnetometer
-    ofxCoreMotion coreMotion;
-	
-	// strength recorded in sensor
+	// sensor values
+	ofxCoreMotion coreMotion;
 	int magnitude;
-	int minSensor, maxSensor, restSensor;
-	int targetSize, currentSize;
-	float easing;
+	int minSensor;
+	int maxSensor;
+	int restSensor;
 	
-	// settings
+	// Interface values
+	int drawingMode;
+	bool followTouch;
+	ofPoint lastTouchPoint;
+	
+	int targetSize;
+	int currentSize;
+
+	
+	// Settings
 	ofxXmlSettings XML;
-	
+	ofParameter<int>	lineWeight;
 	ofParameter<int>	minRange;
 	ofParameter<int>	maxRange;
 	ofParameter<int>	minSize;
@@ -91,9 +91,21 @@ public:
 	ofParameter<bool>	bDoBlink;
 	ofParameter<int>	blinkSlowSpeed;
 	ofParameter<int>	blinkFastSpeed;
-	ofParameter<bool>	bFill;
 	
+	// custom methods
+	void drawModeA();
+	void drawModeB();
+	void drawModeC();	
+	void drawDebugData();
+	void drawColourPicker();
+	void resetSensorButtonPressed();
+	void updateSensorButtonPressed();
+	void colourPickerButtonPressed();
+	void onSwipe(int direction, ofTouchEventArgs & touch);
+		
 	// GUI
+	int controlTab;
+	
 	SimpleButton sensorButton;
 	SimpleButton drawingButton;
 	
@@ -108,8 +120,8 @@ public:
 	// gradient images to colourpick
 	ofImage gradients[NUM_GRADIENTS];
 	int activeGradient;
-	bool bNoGradient;
 	bool bBlinkOn;
 	int blinkSpeed;
 	unsigned long lastBlinkTime;
+	
 };

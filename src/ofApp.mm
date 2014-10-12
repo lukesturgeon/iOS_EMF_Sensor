@@ -10,8 +10,6 @@ void ofApp::setup(){
 	
 	ofLogNotice("width:" + ofToString(ofGetWidth()) + ", height:" + ofToString(ofGetHeight()));
 	
-	bNoGradient = true;
-	
 	// load the gradient files
 	for (int i = 0; i < NUM_GRADIENTS; i++) {
 		gradients[i].loadImage("gradients/col" + ofToString(i) + ".png");
@@ -54,19 +52,18 @@ void ofApp::setup(){
 	drawingGui.add(maxSize.set("maxSize", XML.getValue("SHAPE:SIZE:MAX", mSize), 0, mSize));
 	drawingGui.add(colourPickerButton.setup("set gradient"));
 	drawingGui.add(bDoBlink.set("blink", false));
-	drawingGui.add(bFill.set("fill", XML.getValue("SHAPE:FILL", false)));
 	drawingGui.add(blinkSlowSpeed.set("blinkSlow", XML.getValue("SHAPE:BLINK:MIN", 1000), 10, 1000));
 	drawingGui.add(blinkFastSpeed.set("blinkFast", XML.getValue("SHAPE:BLINK:MAX", 10), 10, 1000));
 	
-	easing = 0.5; //0.001, 0.999
+	// setup starting values
 	restSensor = XML.getValue("SENSOR:REST", 0);
-	bNoGradient = XML.getValue("GRADIENT:ENABLED", false);
 	activeGradient = XML.getValue("GRADIENT:ACTIVE_INDEX", 0);
 	bBlinkOn = false;
 	blinkSlowSpeed.set(1000);
 	blinkFastSpeed.set(50);
-	displayMode = STATE_DEBUG_SENSOR;
 	sensorButton.active = true;
+	lineWeight.set(10); // default line weight
+	drawingMode = DRAWING_MODE_A;
 	
 	// setup sensor
     coreMotion.setupMagnetometer();
@@ -100,7 +97,7 @@ void ofApp::update(){
 	// convert the values in to usefulness
 	int x = abs(magnitude - restSensor);
 	targetSize = ofMap(x, 0, maxRange, minSize, maxSize, true);
-	currentSize += (targetSize - currentSize)  * easing;
+	currentSize += (targetSize - currentSize)  * EASING;
 	blinkSpeed = ofMap(x, 0, maxRange, blinkSlowSpeed, blinkFastSpeed, true);
 	
 	unsigned long now = ofGetElapsedTimeMillis();
@@ -121,75 +118,97 @@ void ofApp::update(){
 //--------------------------------------------------------------
 void ofApp::draw(){
 	
-	if (!bDoBlink || (bDoBlink && bBlinkOn)) {
+	/*if (!bDoBlink || (bDoBlink && bBlinkOn)) {
 		drawShape();
 	}
 	
 	// check and show any debug stuff
 	if (displayMode == STATE_DEBUG_SENSOR) {
 		
-		// draw overlay
-		ofSetColor(128, 0, 128, 128);
-		ofRect(0, 0, ofGetWidth(), ofGetHeight());
-		sensorButton.draw();
-		drawingButton.draw();
-		sensorGui.draw();
-		drawDebugData();
-	}
-	else if (displayMode == STATE_DEBUG_DRAWING) {
 		
-		// draw overlay
-		ofSetColor(128, 0, 128, 128);
-		ofRect(0, 0, ofGetWidth(), ofGetHeight());
-		sensorButton.draw();
-		drawingButton.draw();
-		drawingGui.draw();
-		drawDebugData();
 	}
+	
 	else if (displayMode == STATE_DEBUG_COLOUR) {
 		drawColourPicker();
+	}*/
+	
+	// decide what to draw
+	switch (drawingMode) {
+		case DRAWING_MODE_A:
+			// grow a circle
+			drawModeA();
+			break;
+			
+		case DRAWING_MODE_B:
+			// blink a circle
+			drawModeB();
+			break;
+			
+		case DRAWING_MODE_C:
+			// draw a line
+			drawModeC();
+			break;
+			
+		default:
+			// draw the controls
+			if (controlTab == CONTROL_TAB_DRAWING) {
+				sensorButton.draw();
+				drawingButton.draw();
+				drawingGui.draw();
+				sensorGui.draw(); // draw both for now
+				drawDebugData();
+			}
+			else if (controlTab == CONTROL_TAB_SENSOR) {
+				sensorButton.draw();
+				drawingButton.draw();
+				sensorGui.draw();
+				drawDebugData();
+			}
+			break;
 	}
 }
 
 //--------------------------------------------------------------
-void ofApp::drawShape() {
-	
-	if (bNoGradient) {
-		// set colour based on polarization
-		if (magnitude > restSensor) {
-			ofSetColor(0, 255, 0);
-		}
-		else if(magnitude < restSensor) {
-			ofSetColor(255, 0, 0);
-		}
-	}
-	else {
-		// set colour based on gradient
-		int x = ofMap(currentSize, minSize, maxSize, 1, 300);
-		ofSetColor( gradients[activeGradient].getColor(x, 1) );
-	}
+void ofApp::drawModeA() {
 	
 	ofPushStyle();
 	
-	if (bFill) {
-		ofFill();
-	}
-	else {
-		ofNoFill();
-		ofSetLineWidth(4);
-	}
+	// set colour based on gradient
+	int x = ofMap(currentSize, minSize, maxSize, 1, 300);
+	ofSetColor( gradients[activeGradient].getColor(x, 1) );
 	
-	if (bDoBlink ) {
-		// draw a circle but use the maxSize
-		ofCircle(ofGetWidth()/2, ofGetHeight()/2, maxSize);
-	}
-	else {
-		// draw a circle in the middle of the screen
-		ofCircle(ofGetWidth()/2, ofGetHeight()/2, currentSize);
-	}
+	// draw a circle in the middle of the screen
+	ofCircle(ofGetWidth()/2, ofGetHeight()/2, currentSize);
+	ofSetColor(0, 0, 0);
+	ofCircle(ofGetWidth()/2, ofGetHeight()/2, currentSize-lineWeight);
 	
 	ofPopStyle();
+}
+
+//--------------------------------------------------------------
+void ofApp::drawModeB() {
 	
+	ofPushStyle();
+	
+	// set colour based on gradient
+	int x = ofMap(currentSize, minSize, maxSize, 1, 300);
+	ofSetColor( gradients[activeGradient].getColor(x, 1) );
+	
+	// draw a circle but use the maxSize
+	ofCircle(ofGetWidth()/2, ofGetHeight()/2, maxSize);
+	
+	ofPopStyle();
+}
+
+//--------------------------------------------------------------
+void ofApp::drawModeC() {
+	
+	ofPushStyle();
+	
+	ofSetColor( 255,255,255 );
+	ofCircle(ofGetWidth()/2, ofGetHeight()/2, maxSize);
+	
+	ofPopStyle();
 }
 
 //--------------------------------------------------------------
@@ -258,14 +277,8 @@ void ofApp::drawColourPicker() {
 	ofPushStyle();
 	ofNoFill();
 	
-	if (bNoGradient) {
-		// highlight the no grad
-		ofRect(10, 10, 300, 40);
-	}
-	else {
-		// highlight the grad
-		ofRect(10, 60 + (activeGradient*50), 300, 40);
-	}
+	// highlight the grad
+	ofRect(10, 60 + (activeGradient*50), 300, 40);
 	
 	ofPopStyle();
 }
@@ -286,7 +299,7 @@ void ofApp::updateSensorButtonPressed() {
 
 //--------------------------------------------------------------
 void ofApp::colourPickerButtonPressed() {
-	displayMode = STATE_DEBUG_COLOUR;
+//	displayMode = STATE_DEBUG_COLOUR;
 	ofLogNotice("displayMode is STATE_COLOUR_PICKER");
 }
 
@@ -296,13 +309,14 @@ void ofApp::exit(){
 	updateSensorButton.removeListener(this,&ofApp::updateSensorButtonPressed);
 	colourPickerButton.removeListener(this,&ofApp::colourPickerButtonPressed);
 	
+	ofLogNotice("exit");
+	
 	// save the current settings
 	XML.setValue("SENSOR:RANGE:LOW", minRange);
 	XML.setValue("SENSOR:RANGE:HIGH", maxRange);
 	XML.setValue("SENSOR:REST", restSensor);
 	XML.setValue("SHAPE:SIZE:MIN", minSize);
 	XML.setValue("SHAPE:SIZE:MAX", maxSize);
-	XML.setValue("GRADIENT:ENABLED", bNoGradient);
 	XML.setValue("GRADIENT:ACTIVE_INDEX", activeGradient);
 	XML.setValue("SHAPE:BLINK:MIN", blinkSlowSpeed);
 	XML.setValue("SHAPE:BLINK:MAX", blinkFastSpeed);
@@ -318,11 +332,14 @@ void ofApp::exit(){
 //--------------------------------------------------------------
 void ofApp::touchDown(ofTouchEventArgs & touch){
 	
+	followTouch = true;
+	lastTouchPoint.set(touch.x, touch.y);
+	
 	// check and select colour
-	if (displayMode == STATE_DEBUG_COLOUR) {
+	/*if (displayMode == STATE_DEBUG_COLOUR) {
 		ofRectangle r = ofRectangle(10,10,300,40);
 		if (r.inside(touch.x, touch.y)) {
-			bNoGradient = true;
+//			bNoGradient = true;
 			return;
 		}
 		ofLogNotice("skip this?");
@@ -331,14 +348,14 @@ void ofApp::touchDown(ofTouchEventArgs & touch){
 			
 			if (r.inside(touch.x, touch.y)) {
 				activeGradient = i;
-				bNoGradient = false;
+//				bNoGradient = false;
 				ofLogNotice("activeGradient = " + ofToString(activeGradient));
 			}
 		}
 	}
 	else if (displayMode == STATE_DEBUG_SENSOR) {
 		if (drawingButton.inside(touch.x, touch.y)) {
-			displayMode = STATE_DEBUG_DRAWING;
+//			displayMode = STATE_DEBUG_DRAWING;
 			sensorButton.active = false;
 			drawingButton.active = true;
 			ofLogNotice("state is DEBUG DRAWING");
@@ -346,40 +363,62 @@ void ofApp::touchDown(ofTouchEventArgs & touch){
 	}
 	else if (displayMode == STATE_DEBUG_DRAWING) {
 		if (sensorButton.inside(touch.x, touch.y)) {
-			displayMode = STATE_DEBUG_SENSOR;
+//			displayMode = STATE_DEBUG_SENSOR;
 			sensorButton.active = true;
 			drawingButton.active = false;
 			ofLogNotice("state is DEBUG SENSOR");
 		}
-	}
+	}*/
 }
 
 //--------------------------------------------------------------
 void ofApp::touchMoved(ofTouchEventArgs & touch){
 	
+	if (followTouch) {
+		
+		if ( (lastTouchPoint.x - touch.x) > 50 ) {
+			ofLogNotice("swipe left");
+			followTouch = false;
+		}
+		else if ( (lastTouchPoint.x - touch.x) < -50 ) {
+			ofLogNotice("swipe right");
+			followTouch = false;
+		}
+		else if ( (lastTouchPoint.y - touch.y) > 50 ) {
+			ofLogNotice("swipe up");
+			followTouch = false;
+		}
+		else if ( (lastTouchPoint.y - touch.y) < -50 ) {
+			ofLogNotice("swipe down");
+			followTouch = false;
+		}
+		
+		lastTouchPoint.set(touch.x, touch.y);
+	}
 }
 
 //--------------------------------------------------------------
 void ofApp::touchUp(ofTouchEventArgs & touch){
+	followTouch = false;
 }
 
 //--------------------------------------------------------------
 void ofApp::touchDoubleTap(ofTouchEventArgs & touch){
-	
-    if (displayMode == STATE_BUBBLE) {
-		displayMode = STATE_DEBUG_SENSOR;
-		sensorButton.active = true;
-		drawingButton.active = false;
-		ofLogNotice("displayMode is STATE_DEBUG_SENSOR");
-	}
-	else {
-		displayMode = STATE_BUBBLE;
-		ofLogNotice("displayMode is STATE_BUBBLE");
+	if (drawingMode == 0) {
+		// currently showing controls
+		drawingMode = DRAWING_MODE_A;
+		ofLogNotice( "hide the controls" );
+	} else {
+		// currently drawing
+		controlTab = CONTROL_TAB_DRAWING;
+		drawingMode = 0;
+		ofLogNotice( "show the controls" );
 	}
 }
 
 //--------------------------------------------------------------
 void ofApp::touchCancelled(ofTouchEventArgs & touch){
+	followTouch = false;
 }
 
 //--------------------------------------------------------------
@@ -399,5 +438,5 @@ void ofApp::gotMemoryWarning(){
 
 //--------------------------------------------------------------
 void ofApp::deviceOrientationChanged(int newOrientation){
-	
+	ofLogNotice("deviceOrientationChanged, new = " + ofToString(newOrientation)	);
 }
