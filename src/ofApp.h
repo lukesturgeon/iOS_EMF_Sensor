@@ -6,6 +6,7 @@
 #include "ofxCoreMotion.h"
 #include "ofxGui.h"
 #include "ofxXmlSettings.h"
+#include "ofxSimpleSlider.h"
 
 #define EASING 0.5 //[0.001, 0.999]
 #define NUM_GRADIENTS 4
@@ -19,28 +20,34 @@
 #define CONTROL_TAB_SENSOR 2
 
 class SimpleButton : public ofRectangle {
-	public :
-	string label;
+	
+private:
+	string _label;
+
+public:
 	bool active;
+	
+	void setLabel(string l){
+		_label = l;
+	}
+	
 	void draw() {
-		ofPushMatrix();
-		ofTranslate(x, y);
 		ofPushStyle();
 		
-		if (active == false) {
-			ofSetColor(0);
-			ofFill();
-			ofRect(0, 0, width, height);
-		}
+		/*if (active == false) {
+		 ofSetColor(255);
+		 ofFill();
+		 ofRect(0, 0, width, height);
+		 }*/
 		
-		ofSetColor(128, 0, 128, 128);
-		ofSetLineWidth(4);
-		ofLine(width, 0, width, height);
-		ofSetLineWidth(1);
 		ofSetColor(255);
-		ofDrawBitmapString(label, 10, height/2);
+		ofRect(x, y, width, height);
+		ofSetColor(0);
+		ofRect(x+5, y+5, width-10, height-10);
+		
+		ofSetColor(255);
+		ofDrawBitmapString(_label, x+10, y+height/2);
 		ofPopStyle();
-		ofPopMatrix();
 	}
 };
 
@@ -71,15 +78,13 @@ private:
 	int minSensor;
 	int maxSensor;
 	int restSensor;
+	int targetSize;
+	int currentSize;
 	
 	// Interface values
 	int drawingMode;
 	bool followTouch;
 	ofPoint lastTouchPoint;
-	
-	int targetSize;
-	int currentSize;
-
 	
 	// Settings
 	ofxXmlSettings XML;
@@ -98,21 +103,17 @@ private:
 	void drawModeC();	
 	void drawDebugData();
 	void drawColourPicker();
-	void resetSensorButtonPressed();
-	void updateSensorButtonPressed();
-	void colourPickerButtonPressed();
 	void onSwipe(int direction, ofTouchEventArgs & touch);
+	void saveSettings();
 		
 	// GUI
 	int controlTab;
 	
-	SimpleButton sensorButton;
-	SimpleButton drawingButton;
+	SimpleButton setRestButton;
+	SimpleButton useMinMaxButton;
 	
-	ofxButton resetSensorButton;
-	ofxButton updateSensorButton;
-	ofxButton colourPickerButton;
-	ofxToggle toggleShape;
+	ofxSimpleSlider minSizeSlider;
+	ofxSimpleSlider maxSizeSlider;
 	
 	ofxPanel sensorGui;
 	ofxPanel drawingGui;

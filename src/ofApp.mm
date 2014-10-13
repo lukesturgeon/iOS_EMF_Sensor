@@ -33,25 +33,30 @@ void ofApp::setup(){
 	ofxGuiSetDefaultHeight(30);
 	ofxGuiSetTextPadding(6);
 	
-	resetSensorButton.addListener(this,&ofApp::resetSensorButtonPressed);
-	updateSensorButton.addListener(this,&ofApp::updateSensorButtonPressed);
-	colourPickerButton.addListener(this,&ofApp::colourPickerButtonPressed);
-	
 	float mSize = ofGetWidth()/2;
 	
+	
+	
+	//-
+	setRestButton.set( 320, 0, 320, 100 );
+	setRestButton.setLabel("REST");
+	useMinMaxButton.set( 320, 100, 320, 100 );
+	useMinMaxButton.setLabel("USE MIN MAX");
+	
+	minSizeSlider.set(XML.getValue("SHAPE:SIZE:MIN", 0), 0, mSize);
+	minSizeSlider.setRect( 0, 512, 320, 60 );
+	
+	maxSizeSlider.set(XML.getValue("SHAPE:SIZE:MAX", mSize), 0, mSize);
+	maxSizeSlider.setRect( 0, 512+60, 320, 60 );
+	//-
+	
 	sensorGui.setup("Sensor");
-	sensorGui.setPosition(10,80);
 	sensorGui.add(minRange.set("low", XML.getValue("SENSOR:RANGE:LOW", 0), -2000, 0));
 	sensorGui.add(maxRange.set("high", XML.getValue("SENSOR:RANGE:HIGH", 1), 1, 2000));
-	sensorGui.add(resetSensorButton.setup("set baseline"));
-	sensorGui.add(updateSensorButton.setup("use min/max"));
 	
 	drawingGui.setup("Drawing");
-	drawingGui.setPosition(10,80);
 	drawingGui.add(minSize.set("minSize", XML.getValue("SHAPE:SIZE:MIN", 0), 0, mSize));
 	drawingGui.add(maxSize.set("maxSize", XML.getValue("SHAPE:SIZE:MAX", mSize), 0, mSize));
-	drawingGui.add(colourPickerButton.setup("set gradient"));
-	drawingGui.add(bDoBlink.set("blink", false));
 	drawingGui.add(blinkSlowSpeed.set("blinkSlow", XML.getValue("SHAPE:BLINK:MIN", 1000), 10, 1000));
 	drawingGui.add(blinkFastSpeed.set("blinkFast", XML.getValue("SHAPE:BLINK:MAX", 10), 10, 1000));
 	
@@ -61,20 +66,11 @@ void ofApp::setup(){
 	bBlinkOn = false;
 	blinkSlowSpeed.set(1000);
 	blinkFastSpeed.set(50);
-	sensorButton.active = true;
 	lineWeight.set(10); // default line weight
 	drawingMode = DRAWING_MODE_A;
 	
 	// setup sensor
     coreMotion.setupMagnetometer();
-	
-	int w = ofGetWidth()/2;
-	
-	sensorButton.set(0, 0, w, 60);
-	sensorButton.label = "SENSOR";
-	
-	drawingButton.set(w, 0, w, 60);
-	drawingButton.label = "DRAWING";
 }
 
 //--------------------------------------------------------------
@@ -118,20 +114,6 @@ void ofApp::update(){
 //--------------------------------------------------------------
 void ofApp::draw(){
 	
-	/*if (!bDoBlink || (bDoBlink && bBlinkOn)) {
-		drawShape();
-	}
-	
-	// check and show any debug stuff
-	if (displayMode == STATE_DEBUG_SENSOR) {
-		
-		
-	}
-	
-	else if (displayMode == STATE_DEBUG_COLOUR) {
-		drawColourPicker();
-	}*/
-	
 	// decide what to draw
 	switch (drawingMode) {
 		case DRAWING_MODE_A:
@@ -152,15 +134,16 @@ void ofApp::draw(){
 		default:
 			// draw the controls
 			if (controlTab == CONTROL_TAB_DRAWING) {
-				sensorButton.draw();
-				drawingButton.draw();
+				setRestButton.draw();
+				useMinMaxButton.draw();
 				drawingGui.draw();
 				sensorGui.draw(); // draw both for now
+				drawColourPicker(); // draw all for now
 				drawDebugData();
+				minSizeSlider.draw();
+				maxSizeSlider.draw();
 			}
 			else if (controlTab == CONTROL_TAB_SENSOR) {
-				sensorButton.draw();
-				drawingButton.draw();
 				sensorGui.draw();
 				drawDebugData();
 			}
@@ -252,65 +235,25 @@ void ofApp::drawDebugData() {
 //--------------------------------------------------------------
 void ofApp::drawColourPicker() {
 	
-	// draw overlay
-	ofSetColor(128, 0, 128, 128);
-	ofRect(0, 0, ofGetWidth(), ofGetHeight());
-	
-	// draw the NONE option
 	ofPushStyle();
-	ofSetColor(0, 0, 0);
-	ofRect(10, 10, 300, 40);
-	ofNoFill();
-	ofSetColor(128, 128, 128);
-	ofRect(10, 10, 300, 40);
-	ofSetColor(255, 0, 0);
-	ofLine(10, 50, 310, 10);
-	ofPopStyle();
+	
+	ofSetColor(255);
 	
 	// draw gradients
-	ofSetColor(255, 255, 255);
-	
 	for (int i = 0; i < NUM_GRADIENTS; i++) {
-		gradients[i].draw(10, 60 + (i*50) );
+		gradients[i].draw(0, (i*60), 60, 60 );
 	}
 	
-	ofPushStyle();
-	ofNoFill();
-	
 	// highlight the grad
-	ofRect(10, 60 + (activeGradient*50), 300, 40);
+	ofNoFill();
+	ofSetLineWidth(5);
+	ofRect(0, (activeGradient*60), 60, 60);
 	
 	ofPopStyle();
 }
 
 //--------------------------------------------------------------
-void ofApp::resetSensorButtonPressed() {
-	restSensor = magnitude;
-	minSensor = maxSensor = 0;
-	ofLogNotice("reset sensor");
-}
-
-//--------------------------------------------------------------
-void ofApp::updateSensorButtonPressed() {
-	minRange.set(minSensor);
-	maxRange.set(maxSensor);
-	ofLogNotice("update sensor");
-}
-
-//--------------------------------------------------------------
-void ofApp::colourPickerButtonPressed() {
-//	displayMode = STATE_DEBUG_COLOUR;
-	ofLogNotice("displayMode is STATE_COLOUR_PICKER");
-}
-
-//--------------------------------------------------------------
-void ofApp::exit(){
-	resetSensorButton.removeListener(this,&ofApp::resetSensorButtonPressed);
-	updateSensorButton.removeListener(this,&ofApp::updateSensorButtonPressed);
-	colourPickerButton.removeListener(this,&ofApp::colourPickerButtonPressed);
-	
-	ofLogNotice("exit");
-	
+void ofApp::saveSettings(){
 	// save the current settings
 	XML.setValue("SENSOR:RANGE:LOW", minRange);
 	XML.setValue("SENSOR:RANGE:HIGH", maxRange);
@@ -330,45 +273,15 @@ void ofApp::exit(){
 }
 
 //--------------------------------------------------------------
+void ofApp::exit(){
+	ofLogNotice("exit");
+	saveSettings();
+}
+
+//--------------------------------------------------------------
 void ofApp::touchDown(ofTouchEventArgs & touch){
-	
 	followTouch = true;
 	lastTouchPoint.set(touch.x, touch.y);
-	
-	// check and select colour
-	/*if (displayMode == STATE_DEBUG_COLOUR) {
-		ofRectangle r = ofRectangle(10,10,300,40);
-		if (r.inside(touch.x, touch.y)) {
-//			bNoGradient = true;
-			return;
-		}
-		ofLogNotice("skip this?");
-		for (int i = 0; i < NUM_GRADIENTS; i++) {
-			r.set(10, 60+(i*50), 300, 40);
-			
-			if (r.inside(touch.x, touch.y)) {
-				activeGradient = i;
-//				bNoGradient = false;
-				ofLogNotice("activeGradient = " + ofToString(activeGradient));
-			}
-		}
-	}
-	else if (displayMode == STATE_DEBUG_SENSOR) {
-		if (drawingButton.inside(touch.x, touch.y)) {
-//			displayMode = STATE_DEBUG_DRAWING;
-			sensorButton.active = false;
-			drawingButton.active = true;
-			ofLogNotice("state is DEBUG DRAWING");
-		}
-	}
-	else if (displayMode == STATE_DEBUG_DRAWING) {
-		if (sensorButton.inside(touch.x, touch.y)) {
-//			displayMode = STATE_DEBUG_SENSOR;
-			sensorButton.active = true;
-			drawingButton.active = false;
-			ofLogNotice("state is DEBUG SENSOR");
-		}
-	}*/
 }
 
 //--------------------------------------------------------------
@@ -400,6 +313,30 @@ void ofApp::touchMoved(ofTouchEventArgs & touch){
 //--------------------------------------------------------------
 void ofApp::touchUp(ofTouchEventArgs & touch){
 	followTouch = false;
+	
+	if ( setRestButton.inside(touch.x, touch.y) ) {
+		restSensor = magnitude;
+		minSensor = maxSensor = 0;
+		ofLogNotice("rest sensor");
+	}
+	else if ( useMinMaxButton.inside(touch.x, touch.y) ) {
+		minRange.set(minSensor);
+		maxRange.set(maxSensor);
+		ofLogNotice("update sensor");
+	}
+	else {
+		
+		ofRectangle r = ofRectangle();
+		for (int i = 0; i < NUM_GRADIENTS; i++) {
+			
+			r.set(0, (i*60), 60, 60);
+			
+			if (r.inside(touch.x, touch.y)) {
+				activeGradient = i;
+				ofLogNotice("activeGradient = " + ofToString(activeGradient));
+			}
+		}
+	}
 }
 
 //--------------------------------------------------------------
@@ -424,6 +361,7 @@ void ofApp::touchCancelled(ofTouchEventArgs & touch){
 //--------------------------------------------------------------
 void ofApp::lostFocus(){
 	ofLogNotice("lostFocus");
+	saveSettings();
 }
 
 //--------------------------------------------------------------
