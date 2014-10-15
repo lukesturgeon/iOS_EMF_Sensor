@@ -91,8 +91,8 @@ private:
 	ofParameter<int>	lineWeight;
 	ofParameter<int>	minRange;
 	ofParameter<int>	maxRange;
-	ofParameter<int>	minSize;
-	ofParameter<int>	maxSize;
+	ofParameter<float>	minSize;
+	ofParameter<float>	maxSize;
 	ofParameter<bool>	bDoBlink;
 	ofParameter<int>	blinkSlowSpeed;
 	ofParameter<int>	blinkFastSpeed;

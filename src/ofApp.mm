@@ -43,10 +43,12 @@ void ofApp::setup(){
 	useMinMaxButton.set( 320, 100, 320, 100 );
 	useMinMaxButton.setLabel("USE MIN MAX");
 	
-	minSizeSlider.set(XML.getValue("SHAPE:SIZE:MIN", 0), 0, mSize);
+	minSize.set("min size", XML.getValue("SHAPE:SIZE:MIN", 0), 0, mSize );
+	minSizeSlider.setParameter( minSize );
 	minSizeSlider.setRect( 0, 512, 320, 60 );
 	
-	maxSizeSlider.set(XML.getValue("SHAPE:SIZE:MAX", mSize), 0, mSize);
+	maxSize.set( "max size", XML.getValue("SHAPE:SIZE:MAX", mSize), 0, mSize );
+	maxSizeSlider.setParameter( maxSize );
 	maxSizeSlider.setRect( 0, 512+60, 320, 60 );
 	//-
 	
@@ -289,6 +291,7 @@ void ofApp::touchMoved(ofTouchEventArgs & touch){
 	
 	if (followTouch) {
 		
+		// tell the buttons
 		if ( (lastTouchPoint.x - touch.x) > 50 ) {
 			ofLogNotice("swipe left");
 			followTouch = false;
@@ -306,6 +309,11 @@ void ofApp::touchMoved(ofTouchEventArgs & touch){
 			followTouch = false;
 		}
 		
+		// tell all the sliders to listen
+		minSizeSlider.touchMoved(touch);
+		maxSizeSlider.touchMoved(touch);
+		
+		// update
 		lastTouchPoint.set(touch.x, touch.y);
 	}
 }
