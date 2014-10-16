@@ -29,45 +29,36 @@ void ofApp::setup(){
 	}
 	//------
 	
-	ofxGuiSetDefaultWidth(300);
-	ofxGuiSetDefaultHeight(30);
-	ofxGuiSetTextPadding(6);
-	
-	float mSize = ofGetWidth()/2;
-	
-	
-	
-	//-
 	setRestButton.set( 320, 0, 320, 100 );
 	setRestButton.setLabel("REST");
 	useMinMaxButton.set( 320, 100, 320, 100 );
 	useMinMaxButton.setLabel("USE MIN MAX");
 	
-	minSize.set("min size", XML.getValue("SHAPE:SIZE:MIN", 0), 0, mSize );
+	minSize.set("min size", XML.getValue("SHAPE:SIZE:MIN", 0), 1, ofGetWidth() * 0.5f );
 	minSizeSlider.setParameter( minSize );
 	minSizeSlider.setRect( 0, 512, 320, 60 );
 	
-	maxSize.set( "max size", XML.getValue("SHAPE:SIZE:MAX", mSize), 0, mSize );
+	maxSize.set( "max size", XML.getValue("SHAPE:SIZE:MAX", ofGetWidth() * 0.5f), 1, ofGetWidth() * 0.5f );
 	maxSizeSlider.setParameter( maxSize );
 	maxSizeSlider.setRect( 0, 512+60, 320, 60 );
+	
+	minRange.set("min range", XML.getValue("SENSOR:RANGE:MIN", 0), -2000, 0);
+	minRangeSlider.setParameter(minRange);
+	minRangeSlider.setRect( 0, 512+120, 320, 60 );
+	
+	maxRange.set("max range", XML.getValue("SENSOR:RANGE:MAX", 1), 1, 2000);
+	maxRangeSlider.setParameter(maxRange);
+	maxRangeSlider.setRect( 0, 512+180, 320, 60 );
+	
+	blinkSpeed.set("blink speed", XML.getValue("BLINK:SPEED", 1), 1, 30);
+	blinkSpeedSlider.setParameter(blinkSpeed);
+	blinkSpeedSlider.setRect( 0, 512+240, 320, 60);
 	//-
-	
-	sensorGui.setup("Sensor");
-	sensorGui.add(minRange.set("low", XML.getValue("SENSOR:RANGE:LOW", 0), -2000, 0));
-	sensorGui.add(maxRange.set("high", XML.getValue("SENSOR:RANGE:HIGH", 1), 1, 2000));
-	
-	drawingGui.setup("Drawing");
-	drawingGui.add(minSize.set("minSize", XML.getValue("SHAPE:SIZE:MIN", 0), 0, mSize));
-	drawingGui.add(maxSize.set("maxSize", XML.getValue("SHAPE:SIZE:MAX", mSize), 0, mSize));
-	drawingGui.add(blinkSlowSpeed.set("blinkSlow", XML.getValue("SHAPE:BLINK:MIN", 1000), 10, 1000));
-	drawingGui.add(blinkFastSpeed.set("blinkFast", XML.getValue("SHAPE:BLINK:MAX", 10), 10, 1000));
 	
 	// setup starting values
 	restSensor = XML.getValue("SENSOR:REST", 0);
 	activeGradient = XML.getValue("GRADIENT:ACTIVE_INDEX", 0);
 	bBlinkOn = false;
-	blinkSlowSpeed.set(1000);
-	blinkFastSpeed.set(50);
 	lineWeight.set(10); // default line weight
 	drawingMode = DRAWING_MODE_A;
 	
@@ -96,7 +87,7 @@ void ofApp::update(){
 	int x = abs(magnitude - restSensor);
 	targetSize = ofMap(x, 0, maxRange, minSize, maxSize, true);
 	currentSize += (targetSize - currentSize)  * EASING;
-	blinkSpeed = ofMap(x, 0, maxRange, blinkSlowSpeed, blinkFastSpeed, true);
+//	blinkSpeed = ofMap(x, 0, maxRange, blinkSlowSpeed, blinkFastSpeed, true);
 	
 	unsigned long now = ofGetElapsedTimeMillis();
 	
@@ -135,20 +126,15 @@ void ofApp::draw(){
 			
 		default:
 			// draw the controls
-			if (controlTab == CONTROL_TAB_DRAWING) {
-				setRestButton.draw();
-				useMinMaxButton.draw();
-				drawingGui.draw();
-				sensorGui.draw(); // draw both for now
-				drawColourPicker(); // draw all for now
-				drawDebugData();
-				minSizeSlider.draw();
-				maxSizeSlider.draw();
-			}
-			else if (controlTab == CONTROL_TAB_SENSOR) {
-				sensorGui.draw();
-				drawDebugData();
-			}
+			setRestButton.draw();
+			useMinMaxButton.draw();
+			drawColourPicker();
+			drawDebugData();
+			minSizeSlider.draw();
+			maxSizeSlider.draw();
+			minRangeSlider.draw();
+			maxRangeSlider.draw();
+			blinkSpeedSlider.draw();
 			break;
 	}
 }
@@ -257,15 +243,12 @@ void ofApp::drawColourPicker() {
 //--------------------------------------------------------------
 void ofApp::saveSettings(){
 	// save the current settings
-	XML.setValue("SENSOR:RANGE:LOW", minRange);
-	XML.setValue("SENSOR:RANGE:HIGH", maxRange);
+	XML.setValue("SENSOR:RANGE:MIN", minRange);
+	XML.setValue("SENSOR:RANGE:MAX", maxRange);
 	XML.setValue("SENSOR:REST", restSensor);
 	XML.setValue("SHAPE:SIZE:MIN", minSize);
 	XML.setValue("SHAPE:SIZE:MAX", maxSize);
 	XML.setValue("GRADIENT:ACTIVE_INDEX", activeGradient);
-	XML.setValue("SHAPE:BLINK:MIN", blinkSlowSpeed);
-	XML.setValue("SHAPE:BLINK:MAX", blinkFastSpeed);
-	
 	if ( XML.saveFile( ofxiOSGetDocumentsDirectory() + XML_SETTINGS_FILE) ) {
 		ofLogNotice("saved settings to app documents folder");
 	}
@@ -283,6 +266,14 @@ void ofApp::exit(){
 //--------------------------------------------------------------
 void ofApp::touchDown(ofTouchEventArgs & touch){
 	followTouch = true;
+	
+	// tell all the sliders to listen
+	minSizeSlider.touchDown(touch);
+	maxSizeSlider.touchDown(touch);
+	minRangeSlider.touchDown(touch);
+	maxRangeSlider.touchDown(touch);
+	blinkSpeedSlider.touchDown(touch);
+	
 	lastTouchPoint.set(touch.x, touch.y);
 }
 
@@ -312,6 +303,9 @@ void ofApp::touchMoved(ofTouchEventArgs & touch){
 		// tell all the sliders to listen
 		minSizeSlider.touchMoved(touch);
 		maxSizeSlider.touchMoved(touch);
+		minRangeSlider.touchMoved(touch);
+		maxRangeSlider.touchMoved(touch);
+		blinkSpeedSlider.touchMoved(touch);
 		
 		// update
 		lastTouchPoint.set(touch.x, touch.y);
@@ -355,7 +349,6 @@ void ofApp::touchDoubleTap(ofTouchEventArgs & touch){
 		ofLogNotice( "hide the controls" );
 	} else {
 		// currently drawing
-		controlTab = CONTROL_TAB_DRAWING;
 		drawingMode = 0;
 		ofLogNotice( "show the controls" );
 	}

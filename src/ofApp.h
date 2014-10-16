@@ -4,7 +4,6 @@
 #include "ofxiOS.h"
 #include "ofxiOSExtras.h"
 #include "ofxCoreMotion.h"
-#include "ofxGui.h"
 #include "ofxXmlSettings.h"
 #include "ofxSimpleSlider.h"
 
@@ -15,9 +14,6 @@
 #define DRAWING_MODE_A 1
 #define DRAWING_MODE_B 2
 #define DRAWING_MODE_C 3
-
-#define CONTROL_TAB_DRAWING 1
-#define CONTROL_TAB_SENSOR 2
 
 class SimpleButton : public ofRectangle {
 	
@@ -89,13 +85,12 @@ private:
 	// Settings
 	ofxXmlSettings XML;
 	ofParameter<int>	lineWeight;
-	ofParameter<int>	minRange;
-	ofParameter<int>	maxRange;
+	ofParameter<float>	minRange;
+	ofParameter<float>	maxRange;
 	ofParameter<float>	minSize;
 	ofParameter<float>	maxSize;
 	ofParameter<bool>	bDoBlink;
-	ofParameter<int>	blinkSlowSpeed;
-	ofParameter<int>	blinkFastSpeed;
+	ofParameter<float>	blinkSpeed;
 	
 	// custom methods
 	void drawModeA();
@@ -107,22 +102,20 @@ private:
 	void saveSettings();
 		
 	// GUI
-	int controlTab;
 	
 	SimpleButton setRestButton;
 	SimpleButton useMinMaxButton;
 	
 	ofxSimpleSlider minSizeSlider;
 	ofxSimpleSlider maxSizeSlider;
-	
-	ofxPanel sensorGui;
-	ofxPanel drawingGui;
+	ofxSimpleSlider minRangeSlider;
+	ofxSimpleSlider maxRangeSlider;
+	ofxSimpleSlider blinkSpeedSlider;
 	
 	// gradient images to colourpick
 	ofImage gradients[NUM_GRADIENTS];
 	int activeGradient;
 	bool bBlinkOn;
-	int blinkSpeed;
 	unsigned long lastBlinkTime;
 	
 };
