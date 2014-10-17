@@ -8,9 +8,12 @@ public:
 		_rect = ofRectangle();
 	}
 	
+	void setFont(ofTrueTypeFont & f) {
+		_font = &f;
+	}
+	
 	void setParameter( ofParameter<float> & p){
 		_parameter = &p;
-		_label = _parameter->getName();
 	}
 	
 	void setRect( float px, float py, float w, float h ){
@@ -19,17 +22,22 @@ public:
 	
 	void draw(){
 		
+		ofPushMatrix();
+		ofTranslate(_rect.x, _rect.y);
+		
 		ofPushStyle();
 		
-		ofSetColor(255);
-		ofNoFill();
-		ofRect(_rect);
 		ofFill();
-		ofRect(_rect.x, _rect.y, ofMap(_parameter->get(), _parameter->getMin(), _parameter->getMax(), 0, _rect.width), _rect.height );
-		ofSetColor(255, 0, 0);
-		ofDrawBitmapString(_label, _rect.x, _rect.y + (_rect.height * 0.5f));
+		ofSetColor(80);
+		ofRect( 0, 0, _rect.width, _rect.height );
+		ofSetColor(60);
+		ofRect( 0, 0, _rect.width, 20 );
+		ofSetColor(255);
+		ofRect( 0, 0, ofMap(_parameter->get(), _parameter->getMin(), _parameter->getMax(), 0, _rect.width), 20 );
+		_font->drawString(_parameter->getName()+" ["+ofToString(_parameter->get()) + "]", 4, 50);
 		
 		ofPopStyle();
+		ofPopMatrix();
 	}
 	
 	void touchDown(ofTouchEventArgs & touch){
@@ -43,13 +51,20 @@ public:
 		if ( _rect.inside( touch.x, touch.y ) ) {
 			// it's definately this slider, update
 			_parameter->set( ofMap(touch.x, _rect.x, _rect.x+_rect.width, _parameter->getMin(), _parameter->getMax()) );
+			
+			if ( touch.x-_rect.x < 7 ) {
+				_parameter->set(_parameter->getMin());
+			}
+			else if ( (_rect.x+_rect.width)-touch.x < 7 ) {
+				_parameter->set(_parameter->getMax());
+			}
 		}
 	}
 	
 private:
 	
+	ofTrueTypeFont* _font;
 	ofParameter<float>* _parameter;
-	string _label;
 	ofRectangle _rect;
 	
 };

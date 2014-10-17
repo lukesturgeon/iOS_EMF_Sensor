@@ -7,6 +7,11 @@ void ofApp::setup(){
     ofBackground(0);
 	ofSetCircleResolution(64);
 	ofxiOSDisableIdleTimer();
+	ofTrueTypeFont::setGlobalDpi(72);
+	
+	futura24.loadFont("fonts/FuturaStd-Book.ttf", 24, true, true);
+	futura24.setLineHeight(18.0f);
+	futura24.setLetterSpacing(1.037);
 	
 	ofLogNotice("width:" + ofToString(ofGetWidth()) + ", height:" + ofToString(ofGetHeight()));
 	
@@ -29,34 +34,38 @@ void ofApp::setup(){
 	}
 	//------
 	
-	setRestButton.set( 320, 0, 320, 100 );
-	setRestButton.setLabel("REST");
-	useMinMaxButton.set( 320, 100, 320, 100 );
-	useMinMaxButton.setLabel("USE MIN MAX");
+	setBaseButton.setFont(futura24);
+	setBaseButton.setLabel("SET BASE");
 	
-	minSize.set("min size", XML.getValue("SHAPE:SIZE:MIN", 0), 1, ofGetWidth() * 0.5f );
-	minSizeSlider.setParameter( minSize );
-	minSizeSlider.setRect( 0, 512, 320, 60 );
+	resetButton.setFont(futura24);
+	resetButton.setLabel("RESET");
 	
-	maxSize.set( "max size", XML.getValue("SHAPE:SIZE:MAX", ofGetWidth() * 0.5f), 1, ofGetWidth() * 0.5f );
-	maxSizeSlider.setParameter( maxSize );
-	maxSizeSlider.setRect( 0, 512+60, 320, 60 );
+	useMinMaxButton.setFont(futura24);
+	useMinMaxButton.setLabel("SET MIN/MAX");
 	
-	minRange.set("min range", XML.getValue("SENSOR:RANGE:MIN", 0), -2000, 0);
+	minRange.set("MIN", XML.getValue("SENSOR:RANGE:MIN", 0), -2000, 0);
+	minRangeSlider.setFont(futura24);
 	minRangeSlider.setParameter(minRange);
-	minRangeSlider.setRect( 0, 512+120, 320, 60 );
 	
-	maxRange.set("max range", XML.getValue("SENSOR:RANGE:MAX", 1), 1, 2000);
+	maxRange.set("MAX", XML.getValue("SENSOR:RANGE:MAX", 1), 1, 2000);
+	maxRangeSlider.setFont(futura24);
 	maxRangeSlider.setParameter(maxRange);
-	maxRangeSlider.setRect( 0, 512+180, 320, 60 );
 	
-	blinkSpeed.set("blink speed", XML.getValue("BLINK:SPEED", 1), 1, 30);
+	minSize.set("MIN", XML.getValue("SHAPE:SIZE:MIN", 0), 1, ofGetWidth() * 0.5f );
+	minSizeSlider.setFont(futura24);
+	minSizeSlider.setParameter( minSize );
+	
+	maxSize.set( "MAX", XML.getValue("SHAPE:SIZE:MAX", ofGetWidth() * 0.5f), 1, ofGetWidth() * 0.5f );
+	maxSizeSlider.setFont(futura24);
+	maxSizeSlider.setParameter( maxSize );
+	
+	blinkSpeed.set("BLINK", XML.getValue("BLINK:SPEED", 1), 1, 30);
+	blinkSpeedSlider.setFont(futura24);
 	blinkSpeedSlider.setParameter(blinkSpeed);
-	blinkSpeedSlider.setRect( 0, 512+240, 320, 60);
 	//-
 	
 	// setup starting values
-	restSensor = XML.getValue("SENSOR:REST", 0);
+	sensorBaseline = XML.getValue("SENSOR:REST", 0);
 	activeGradient = XML.getValue("GRADIENT:ACTIVE_INDEX", 0);
 	bBlinkOn = false;
 	lineWeight.set(10); // default line weight
@@ -73,18 +82,18 @@ void ofApp::update(){
 	
 	// magnetometer data parse
 	ofVec3f m = coreMotion.getMagnetometerData();
-	magnitude = m.length();
+	magnitude = m.length()/10;
 	
 	// record the peak values
-	if (magnitude-restSensor > maxSensor) {
-		maxSensor = magnitude-restSensor;
+	if (magnitude-sensorBaseline > sensorMax) {
+		sensorMax = magnitude-sensorBaseline;
 	}
-	else if (magnitude-restSensor < minSensor) {
-		minSensor = magnitude-restSensor;
+	else if (magnitude-sensorBaseline < sensorMin) {
+		sensorMin = magnitude-sensorBaseline;
 	}
 	
 	// convert the values in to usefulness
-	int x = abs(magnitude - restSensor);
+	int x = abs(magnitude - sensorBaseline);
 	targetSize = ofMap(x, 0, maxRange, minSize, maxSize, true);
 	currentSize += (targetSize - currentSize)  * EASING;
 //	blinkSpeed = ofMap(x, 0, maxRange, blinkSlowSpeed, blinkFastSpeed, true);
@@ -126,15 +135,7 @@ void ofApp::draw(){
 			
 		default:
 			// draw the controls
-			setRestButton.draw();
-			useMinMaxButton.draw();
-			drawColourPicker();
-			drawDebugData();
-			minSizeSlider.draw();
-			maxSizeSlider.draw();
-			minRangeSlider.draw();
-			maxRangeSlider.draw();
-			blinkSpeedSlider.draw();
+			drawController();
 			break;
 	}
 }
@@ -183,59 +184,74 @@ void ofApp::drawModeC() {
 }
 
 //--------------------------------------------------------------
-void ofApp::drawDebugData() {
-	// draw debugging data
-	ofSetColor(255);
+
+void ofApp::drawController() {
 	
-	ofPushMatrix();
-	
-	ofTranslate(10, 360);
-	ofDrawBitmapStringHighlight("Magnetometer (x,y,z):", 0, 0);
-	ofVec3f m = coreMotion.getMagnetometerData();
-	ofDrawBitmapString(ofToString(m.x), 0, 20);
-	ofDrawBitmapString(ofToString(m.y), 100, 20);
-	ofDrawBitmapString(ofToString(m.z), 200, 20);
-	
-	ofTranslate(0, 40);
-	ofDrawBitmapStringHighlight("Magnitude (act,-rest):", 0, 0);
-	ofDrawBitmapString(ofToString(magnitude), 0, 20);
-	ofDrawBitmapString(ofToString(magnitude - restSensor), 100, 20);
-	
-	ofTranslate(0, 40);
-	ofDrawBitmapStringHighlight("Sensor (rest,min,max):", 0, 0);
-	ofDrawBitmapString(ofToString(restSensor), 0, 20);
-	
-	// show if the value is outside the range
+	//baseline
 	ofPushStyle();
-	if (minSensor < minRange) ofSetColor(255, 0, 0);
-	ofDrawBitmapString(ofToString(minSensor), 100, 20);
+	ofSetColor(100);
+	ofSetLineWidth(1);
+	for (int i = 0; i < ofGetHeight(); i += 20) {
+//		ofLine(0, i, ofGetWidth(), i);
+	}
 	ofPopStyle();
 	
-	// show if the vaue is outside the range
+	// titles
+	futura24.drawString("ACTUAL", 0, 40);
+	futura24.drawString("BASE", 160, 40);
+	futura24.drawString("MIN", 320, 40);
+	futura24.drawString("MAX", 480, 40);
+	
+	// numbers
+	ofPushMatrix();
+	ofTranslate(0, 80);
+	futura24.drawString(ofToString(magnitude), 0, 0);
+	futura24.drawString(ofToString(sensorBaseline), 160, 0);
+	
 	ofPushStyle();
-	if (maxSensor > maxRange) ofSetColor(0, 255, 0);
-	ofDrawBitmapString(ofToString(maxSensor), 200, 20);
+	if (sensorMin < minRange) ofSetColor(255, 0, 0);
+	futura24.drawString(ofToString(sensorBaseline + sensorMin), 320, 0);
+	ofPopStyle();
+	
+	ofPushStyle();
+	if (sensorMax > maxRange) ofSetColor(255, 0, 0);
+	futura24.drawString(ofToString(sensorBaseline + sensorMax), 480, 0);
 	ofPopStyle();
 	
 	ofPopMatrix();
-}
-
-//--------------------------------------------------------------
-void ofApp::drawColourPicker() {
 	
+	//buttons
+	setBaseButton.setRect( 0, 120, 200, 80 );
+	setBaseButton.draw();
+	resetButton.setRect( 220, 120, 200, 80);
+	resetButton.draw();
+	useMinMaxButton.setRect( 440, 120, 200, 80 );
+	useMinMaxButton.draw();
+	
+	// sliders
+	futura24.drawString("SENSOR RANGE", 0, 260);
+	
+	minRangeSlider.setRect( 0, 280, 640, 80 );
+	minRangeSlider.draw();
+	maxRangeSlider.setRect( 0, 380, 640, 80 );
+	maxRangeSlider.draw();
+	
+	futura24.drawString("CIRCLE", 0, 520);
+	
+	minSizeSlider.setRect( 0, 540, 640, 80 );
+	minSizeSlider.draw();
+	maxSizeSlider.setRect( 0, 640, 640, 80 );
+	maxSizeSlider.draw();
+	blinkSpeedSlider.setRect( 0, 740, 640, 80 );
+	blinkSpeedSlider.draw();
+	
+	// gradients
 	ofPushStyle();
-	
 	ofSetColor(255);
-	
-	// draw gradients
+	ofRect(-3+(activeGradient*100), 850-3, 80+6, 80+6);
 	for (int i = 0; i < NUM_GRADIENTS; i++) {
-		gradients[i].draw(0, (i*60), 60, 60 );
+		gradients[i].draw(0+(i*100), 850, 80, 80 );
 	}
-	
-	// highlight the grad
-	ofNoFill();
-	ofSetLineWidth(5);
-	ofRect(0, (activeGradient*60), 60, 60);
 	
 	ofPopStyle();
 }
@@ -245,7 +261,7 @@ void ofApp::saveSettings(){
 	// save the current settings
 	XML.setValue("SENSOR:RANGE:MIN", minRange);
 	XML.setValue("SENSOR:RANGE:MAX", maxRange);
-	XML.setValue("SENSOR:REST", restSensor);
+	XML.setValue("SENSOR:REST", sensorBaseline);
 	XML.setValue("SHAPE:SIZE:MIN", minSize);
 	XML.setValue("SHAPE:SIZE:MAX", maxSize);
 	XML.setValue("GRADIENT:ACTIVE_INDEX", activeGradient);
@@ -316,15 +332,19 @@ void ofApp::touchMoved(ofTouchEventArgs & touch){
 void ofApp::touchUp(ofTouchEventArgs & touch){
 	followTouch = false;
 	
-	if ( setRestButton.inside(touch.x, touch.y) ) {
-		restSensor = magnitude;
-		minSensor = maxSensor = 0;
-		ofLogNotice("rest sensor");
+	if ( resetButton.inside(touch.x, touch.y)) {
+		sensorMin = 0;
+		sensorMax = 0;
+		ofLogNotice("reset sensor");
+	}
+	else if ( setBaseButton.inside(touch.x, touch.y) ) {
+		sensorBaseline = magnitude;
+		ofLogNotice("set baseline");
 	}
 	else if ( useMinMaxButton.inside(touch.x, touch.y) ) {
-		minRange.set(minSensor);
-		maxRange.set(maxSensor);
-		ofLogNotice("update sensor");
+		minRange.set(sensorMin);
+		maxRange.set(sensorMax);
+		ofLogNotice("set min/max");
 	}
 	else {
 		

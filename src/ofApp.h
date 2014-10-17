@@ -5,6 +5,7 @@
 #include "ofxiOSExtras.h"
 #include "ofxCoreMotion.h"
 #include "ofxXmlSettings.h"
+#include "ofxSimpleButton.h"
 #include "ofxSimpleSlider.h"
 
 #define EASING 0.5 //[0.001, 0.999]
@@ -14,38 +15,6 @@
 #define DRAWING_MODE_A 1
 #define DRAWING_MODE_B 2
 #define DRAWING_MODE_C 3
-
-class SimpleButton : public ofRectangle {
-	
-private:
-	string _label;
-
-public:
-	bool active;
-	
-	void setLabel(string l){
-		_label = l;
-	}
-	
-	void draw() {
-		ofPushStyle();
-		
-		/*if (active == false) {
-		 ofSetColor(255);
-		 ofFill();
-		 ofRect(0, 0, width, height);
-		 }*/
-		
-		ofSetColor(255);
-		ofRect(x, y, width, height);
-		ofSetColor(0);
-		ofRect(x+5, y+5, width-10, height-10);
-		
-		ofSetColor(255);
-		ofDrawBitmapString(_label, x+10, y+height/2);
-		ofPopStyle();
-	}
-};
 
 class ofApp : public ofxiOSApp {
 	
@@ -66,21 +35,6 @@ public:
 	void gotMemoryWarning();
 	void deviceOrientationChanged(int newOrientation);
 	
-private:
-	
-	// sensor values
-	ofxCoreMotion coreMotion;
-	int magnitude;
-	int minSensor;
-	int maxSensor;
-	int restSensor;
-	int targetSize;
-	int currentSize;
-	
-	// Interface values
-	int drawingMode;
-	bool followTouch;
-	ofPoint lastTouchPoint;
 	
 	// Settings
 	ofxXmlSettings XML;
@@ -92,19 +46,37 @@ private:
 	ofParameter<bool>	bDoBlink;
 	ofParameter<float>	blinkSpeed;
 	
+	
+	// sensor values
+	ofxCoreMotion coreMotion;
+	int magnitude;
+	int sensorBaseline;
+	int sensorMin;
+	int sensorMax;
+	
+	int targetSize;
+	int currentSize;
+	
+	// Interface values
+	int drawingMode;
+	bool followTouch;
+	ofPoint lastTouchPoint;
+	
+	ofTrueTypeFont futura24;
+	
 	// custom methods
 	void drawModeA();
 	void drawModeB();
-	void drawModeC();	
-	void drawDebugData();
-	void drawColourPicker();
+	void drawModeC();
+	void drawController();
+	
 	void onSwipe(int direction, ofTouchEventArgs & touch);
 	void saveSettings();
 		
 	// GUI
-	
-	SimpleButton setRestButton;
-	SimpleButton useMinMaxButton;
+	ofxSimpleButton resetButton;
+	ofxSimpleButton setBaseButton;
+	ofxSimpleButton useMinMaxButton;
 	
 	ofxSimpleSlider minSizeSlider;
 	ofxSimpleSlider maxSizeSlider;
