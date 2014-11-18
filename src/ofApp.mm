@@ -7,8 +7,12 @@ void ofApp::setup(){
     ofBackground(0);
 	ofSetCircleResolution(64);
 	ofxiOSDisableIdleTimer();
-	ofTrueTypeFont::setGlobalDpi(72);
 	
+	//TOUCH EVENTS
+	ofAddListener(touchEvents.onLongPress, this, & ofApp::touchLongPress);
+	
+	//FONTS
+	ofTrueTypeFont::setGlobalDpi(72);
 	futura24.loadFont("fonts/FuturaStd-Book.ttf", 24, true, true);
 	futura24.setLineHeight(18.0f);
 	futura24.setLetterSpacing(1.037);
@@ -38,10 +42,10 @@ void ofApp::setup(){
 	setBaseButton.setLabel("SET BASE");
 	
 	resetButton.setFont(futura24);
-	resetButton.setLabel("RESET");
+	resetButton.setLabel("RESET MIN/MAX");
 	
 	useMinMaxButton.setFont(futura24);
-	useMinMaxButton.setLabel("SET MIN/MAX");
+	useMinMaxButton.setLabel("USE MIN/MAX");
 	
 	minRange.set("MIN", XML.getValue("SENSOR:RANGE:MIN", 0), -2000, 0);
 	minRangeSlider.setFont(futura24);
@@ -96,11 +100,11 @@ void ofApp::update(){
 	int x = abs(magnitude - sensorBaseline);
 	targetSize = ofMap(x, 0, maxRange, minSize, maxSize, true);
 	currentSize += (targetSize - currentSize)  * EASING;
-//	blinkSpeed = ofMap(x, 0, maxRange, blinkSlowSpeed, blinkFastSpeed, true);
+	//	blinkSpeed = ofMap(x, 0, maxRange, blinkSlowSpeed, blinkFastSpeed, true);
 	
-	unsigned long now = ofGetElapsedTimeMillis();
+	touchEvents.update();
 	
-	if(bDoBlink) {
+	/*if(bDoBlink) {
 		if (!bBlinkOn && now - lastBlinkTime > blinkSpeed) {
 			bBlinkOn = true;
 			lastBlinkTime = now;
@@ -110,7 +114,7 @@ void ofApp::update(){
 			bBlinkOn = false;
 			lastBlinkTime = now;
 		}
-	}
+	}*/
 }
 
 //--------------------------------------------------------------
@@ -134,6 +138,7 @@ void ofApp::draw(){
 			break;
 			
 		default:
+			// also DRAWING_MODE_CONTROLS
 			// draw the controls
 			drawController();
 			break;
@@ -192,7 +197,7 @@ void ofApp::drawController() {
 	ofSetColor(100);
 	ofSetLineWidth(1);
 	for (int i = 0; i < ofGetHeight(); i += 20) {
-//		ofLine(0, i, ofGetWidth(), i);
+		//		ofLine(0, i, ofGetWidth(), i);
 	}
 	ofPopStyle();
 	
@@ -265,7 +270,8 @@ void ofApp::saveSettings(){
 	XML.setValue("SHAPE:SIZE:MIN", minSize);
 	XML.setValue("SHAPE:SIZE:MAX", maxSize);
 	XML.setValue("GRADIENT:ACTIVE_INDEX", activeGradient);
-	if ( XML.saveFile( ofxiOSGetDocumentsDirectory() + XML_SETTINGS_FILE) ) {
+	if ( XML.saveFile( ofxiOSGetDocumentsDirectory() + XML_SETTINGS_FILE) )
+	{
 		ofLogNotice("saved settings to app documents folder");
 	}
 	else {
@@ -280,15 +286,39 @@ void ofApp::exit(){
 }
 
 //--------------------------------------------------------------
+void ofApp::touchLongPress(unsigned long & e)
+{
+	if (drawingMode == DRAWING_MODE_CONTROLS)
+	{
+		// currently showing controls
+		drawingMode = DRAWING_MODE_A;
+		ofLogNotice( "hide the controls" );
+	}
+	else
+	{
+		// currently drawing
+		drawingMode = 0;
+		ofLogNotice( "show the controls" );
+	}
+}
+
+//--------------------------------------------------------------
 void ofApp::touchDown(ofTouchEventArgs & touch){
-	followTouch = true;
 	
-	// tell all the sliders to listen
-	minSizeSlider.touchDown(touch);
-	maxSizeSlider.touchDown(touch);
-	minRangeSlider.touchDown(touch);
-	maxRangeSlider.touchDown(touch);
-	blinkSpeedSlider.touchDown(touch);
+	touchEvents.touchDown(touch);
+	
+	followTouch = true;
+	touchStartMillis = ofGetElapsedTimeMillis();
+	
+	if(drawingMode == DRAWING_MODE_CONTROLS)
+	{
+		// tell all the sliders to listen
+		minSizeSlider.touchDown(touch);
+		maxSizeSlider.touchDown(touch);
+		minRangeSlider.touchDown(touch);
+		maxRangeSlider.touchDown(touch);
+		blinkSpeedSlider.touchDown(touch);
+	}
 	
 	lastTouchPoint.set(touch.x, touch.y);
 }
@@ -296,8 +326,10 @@ void ofApp::touchDown(ofTouchEventArgs & touch){
 //--------------------------------------------------------------
 void ofApp::touchMoved(ofTouchEventArgs & touch){
 	
-	if (followTouch) {
-		
+	touchEvents.touchMoved(touch);
+	
+	if (followTouch)
+	{
 		// tell the buttons
 		if ( (lastTouchPoint.x - touch.x) > 50 ) {
 			ofLogNotice("swipe left");
@@ -316,46 +348,55 @@ void ofApp::touchMoved(ofTouchEventArgs & touch){
 			followTouch = false;
 		}
 		
+		// update
+		lastTouchPoint.set(touch.x, touch.y);
+	}
+	
+	if (drawingMode == DRAWING_MODE_CONTROLS)
+	{
 		// tell all the sliders to listen
 		minSizeSlider.touchMoved(touch);
 		maxSizeSlider.touchMoved(touch);
 		minRangeSlider.touchMoved(touch);
 		maxRangeSlider.touchMoved(touch);
 		blinkSpeedSlider.touchMoved(touch);
-		
-		// update
-		lastTouchPoint.set(touch.x, touch.y);
 	}
 }
 
 //--------------------------------------------------------------
 void ofApp::touchUp(ofTouchEventArgs & touch){
+	//pass to controller
+	touchEvents.touchUp(touch);
+	
 	followTouch = false;
 	
-	if ( resetButton.inside(touch.x, touch.y)) {
-		sensorMin = 0;
-		sensorMax = 0;
-		ofLogNotice("reset sensor");
-	}
-	else if ( setBaseButton.inside(touch.x, touch.y) ) {
-		sensorBaseline = magnitude;
-		ofLogNotice("set baseline");
-	}
-	else if ( useMinMaxButton.inside(touch.x, touch.y) ) {
-		minRange.set(sensorMin);
-		maxRange.set(sensorMax);
-		ofLogNotice("set min/max");
-	}
-	else {
-		
-		ofRectangle r = ofRectangle();
-		for (int i = 0; i < NUM_GRADIENTS; i++) {
+	if(drawingMode == DRAWING_MODE_CONTROLS)
+	{
+		if ( resetButton.inside(touch.x, touch.y)) {
+			sensorMin = 0;
+			sensorMax = 0;
+			ofLogNotice("reset sensor");
+		}
+		else if ( setBaseButton.inside(touch.x, touch.y) ) {
+			sensorBaseline = magnitude;
+			ofLogNotice("set baseline");
+		}
+		else if ( useMinMaxButton.inside(touch.x, touch.y) ) {
+			minRange.set(sensorMin);
+			maxRange.set(sensorMax);
+			ofLogNotice("set min/max");
+		}
+		else {
 			
-			r.set(0, (i*60), 60, 60);
-			
-			if (r.inside(touch.x, touch.y)) {
-				activeGradient = i;
-				ofLogNotice("activeGradient = " + ofToString(activeGradient));
+			ofRectangle r = ofRectangle();
+			for (int i = 0; i < NUM_GRADIENTS; i++) {
+				
+				r.set(i*100, 850, 60, 60);
+				
+				if (r.inside(touch.x, touch.y)) {
+					activeGradient = i;
+					ofLogNotice("activeGradient = " + ofToString(activeGradient));
+				}
 			}
 		}
 	}
@@ -363,19 +404,13 @@ void ofApp::touchUp(ofTouchEventArgs & touch){
 
 //--------------------------------------------------------------
 void ofApp::touchDoubleTap(ofTouchEventArgs & touch){
-	if (drawingMode == 0) {
-		// currently showing controls
-		drawingMode = DRAWING_MODE_A;
-		ofLogNotice( "hide the controls" );
-	} else {
-		// currently drawing
-		drawingMode = 0;
-		ofLogNotice( "show the controls" );
-	}
+	touchEvents.touchDoubleTap(touch);
+	//do nothing
 }
 
 //--------------------------------------------------------------
 void ofApp::touchCancelled(ofTouchEventArgs & touch){
+	touchEvents.touchCancelled(touch);
 	followTouch = false;
 }
 

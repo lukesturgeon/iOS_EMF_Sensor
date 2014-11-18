@@ -1,12 +1,14 @@
 #pragma once
 
 #include "ofMain.h"
+#include "ofEvents.h"
 #include "ofxiOS.h"
 #include "ofxiOSExtras.h"
 #include "ofxCoreMotion.h"
 #include "ofxXmlSettings.h"
 #include "ofxSimpleButton.h"
 #include "ofxSimpleSlider.h"
+#include "ofxSimpleTouchEvents.h"
 
 #define EASING 0.5 //[0.001, 0.999]
 #define NUM_GRADIENTS 4
@@ -15,6 +17,7 @@
 #define DRAWING_MODE_A 1
 #define DRAWING_MODE_B 2
 #define DRAWING_MODE_C 3
+#define DRAWING_MODE_CONTROLS 0
 
 class ofApp : public ofxiOSApp {
 	
@@ -29,6 +32,7 @@ public:
 	void touchUp(ofTouchEventArgs & touch);
 	void touchDoubleTap(ofTouchEventArgs & touch);
 	void touchCancelled(ofTouchEventArgs & touch);
+	void touchLongPress(unsigned long & e);
 	
 	void lostFocus();
 	void gotFocus();
@@ -53,11 +57,14 @@ public:
 	int sensorBaseline;
 	int sensorMin;
 	int sensorMax;
-	
 	int targetSize;
 	int currentSize;
 	
+	//Touch
+	ofxSimpleTouchEvents touchEvents;
+	
 	// Interface values
+	unsigned long touchStartMillis;
 	int drawingMode;
 	bool followTouch;
 	ofPoint lastTouchPoint;
